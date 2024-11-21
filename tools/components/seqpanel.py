@@ -428,6 +428,7 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
         self._block_height = block_height
         self._block_width = max(min(block_width, self._MAX_BLOCK_WIDTH),self._MIN_BLOCK_WIDTH)
         self._block_width_var.set(self._block_width)
+        self.__destory_ruler()
         self.__draw_ruler()
         # self.CurrFrame = 0
 
