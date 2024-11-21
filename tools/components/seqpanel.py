@@ -140,6 +140,10 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
 
         # controller
         self._video_ctrl = None
+        self._video_draw_panel = None
+
+    def bind_draw_panel(self, panel):
+        self._video_draw_panel = panel
     
     def bind_controller(self, ctrl):
         self._video_ctrl = ctrl
@@ -274,8 +278,13 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
         if self.rows > 0 and event.y < self.height_total:
 
             self._selected_row = int(event.y / self._block_height + self._get_offy_n())
+
+            names = self._row_data[self._selected_row][1].get_target_name()
+            # if names is not None:
+            self._video_draw_panel.select_target(names)
+
             self._n_start = int(event.x / self._block_width + self._get_offx_n())
-            print(self._n_start, event.x, self._block_width, self._get_offx_n())
+            # print(self._n_start, event.x, self._block_width, self._get_offx_n())
             x0 = self._n_start*self._block_width
             y0 = self._selected_row*self._block_height
             

@@ -63,6 +63,7 @@ class MainWindow(object):
     ShapeBase.BindCanvasRoot(workspace)
     play_controller = PlayController(left_panel, workspace, height=60, bg='Gainsboro')
     seq_panel.bind_controller(play_controller)
+    seq_panel.bind_draw_panel(workspace)
     menu_bar.controler = play_controller
     menu_bar.bind_workspace(workspace)
     right_panel.controler = play_controller

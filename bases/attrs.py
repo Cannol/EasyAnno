@@ -11,6 +11,8 @@ class AttrBase(JsonTransBase, metaclass=LoggerMeta):
     _default_path: str = ""
     _abbr = ".attr"
 
+    def get_target_name(self): return None
+
     @classmethod
     def SetLength(cls, length_total):
         cls._length = length_total
@@ -112,6 +114,8 @@ class SingleAttr(AttrBase):
         super().__init__()
         self.target_name = ""
 
+    def get_target_name(self): return [self.target_name]
+
     @classmethod
     def CheckAndCreate(cls, target_name):
         if target_name in cls.attrs.keys():
@@ -179,6 +183,8 @@ class MultiObjAttr(AttrBase):
 
     attrs = {}
 
+    def get_target_name(self): return self.object_group.copy()
+
     def __init__(self):
         super().__init__()
         self.object_group: list[str] = []
@@ -210,6 +216,8 @@ class FreeAttr(AttrBase):
 
     attrs = {}
 
+    def get_target_name(self): return None
+        
     def __init__(self):
         super().__init__()
 

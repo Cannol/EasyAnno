@@ -882,6 +882,19 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
     #             else:
     #                 data = SharedNamespace.frameseq_panel.add_item(attr_name, attr_type, data)
 
+    def select_target(self, names):
+        if names is None:
+            ShapeBase.ClearSelection()
+            return
+        # print(f"select: {names}")
+        ShapeBase.ClearSelection()
+        for name in names:
+            rect: TRectangle = self.rects.get(name, None)
+            if rect is not None:
+                # ShapeBase.SELECTED_OBJECTS.append(rect)
+                rect._on_mouse_left_click_with_shift(None)
+        self.refresh()
+    
     def refresh(self):
         if self._is_open:
 
