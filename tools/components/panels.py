@@ -536,7 +536,7 @@ class ShapeBase(object):
 
 class TRectangle(ShapeBase):
 
-    def __init__(self, name, x1, y1, x2, y2, alpha=1.0, handle_r=3, **kwargs):
+    def __init__(self, name, x1, y1, x2, y2, alpha=1.0, handle_r=5, **kwargs):
         super().__init__(name)
         
         self._image = None
@@ -557,15 +557,17 @@ class TRectangle(ShapeBase):
         
         # assert self._inner_h > 0 and self._inner_w > 0
 
+        self._handle = []
+
         self.draw_rect()
         self.fill_color()
-
-        self._handle = []
 
         self._change_handle = None
         
         self._anchor_point = None
         self._handle_r = handle_r
+
+        # self._show_state = True
 
         if not self._anonymous:
             self._root.addtag_withtag(self._name, self._rect)
@@ -579,6 +581,13 @@ class TRectangle(ShapeBase):
             # self._root.tag_bind('handle', sequence="<Button-1>", func=self._handle_left_btn)
             
             # self._root.tag_bind(self._name, sequence="<Leave>", func=self._on_mouse_leave)
+    # def set_visiable(self, visiable):
+    #     if self._show_state != visiable:
+    #         self._show_state = visiable
+    #         if self._show_state:
+    #             self._root.itemconfig(self.Name, state='hidden')
+    #         else:
+    #             self._root.itemconfig(self.Name, state='normal')
 
     def _moved_hook(self, dx, dy):
         if dx == 0 and dy == 0: return
@@ -617,6 +626,7 @@ class TRectangle(ShapeBase):
 
     def show_handle(self):
         for _handle in self._handle:
+            self._root.tag_raise(_handle)
             self._root.itemconfig(_handle, state='normal')
 
     def hidden_handle(self, indexes):
@@ -694,6 +704,10 @@ class TRectangle(ShapeBase):
                 self._image_tk = self._root.create_image(self._x1, self._y1, image=self._image, anchor='nw')
             else:
                 self._image_tk = self._root.create_image(self._x1, self._y1, image=self._image, anchor='nw', tag=self._name)
+        
+        for _handle in self._handle:
+            self._root.tag_raise(_handle)
+
     
     # @classmethod
     # def FindByID(cls, rect_id):
@@ -706,8 +720,6 @@ class TRectangle(ShapeBase):
     def _coords_handles(self, r):
         for _handle, (x, y) in zip(self._handle, self._points):
             self._root.coords(_handle, x-r, y-r, x+r, y+r)
-            self._root.tag_raise(_handle, self._image_tk)
-            self._root.tag_raise(_handle, self._rect)
 
     def coords(self, x1, y1, x2, y2):
         self._update_inner_params(x1, y1, x2, y2)
@@ -782,6 +794,8 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
         # self.bind("<Button-3>", self._change_value)
         self.bind("<KeyRelease-Delete>", self.remove_target)
 
+        self.bind('<KeyRelease-b>', self.switch_show_no_exist_frame)
+
         self._start_x = -1
         self._start_y = -1
         self._rect = None
@@ -789,10 +803,15 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
         self._selected_rects = set()
 
         self._is_open = False
+        self._show_no_exist_frame = True
 
         # DATA
         # self.data_matirx = {}
         # self.data_refresh = {}
+
+    def switch_show_no_exist_frame(self, event):
+        self._show_no_exist_frame = not self._show_no_exist_frame
+        self.refresh()
 
     def close(self):
         if self._is_open:
@@ -865,6 +884,8 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
 
     def refresh(self):
         if self._is_open:
+
+            remove_item = set()
             # print(self._target_list)
             for name, t_obj in self._target_list.items():
                 # print("targets ", name)
@@ -878,6 +899,12 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
                 x1, y1 = rect_curr[0] * self.Scale
                 x2, y2 = rect_curr[2] * self.Scale
                 # print(x1,y1,x2,y2)
+
+                if (not self._show_no_exist_frame) and state == -1:
+                    if rect is not None:
+                        remove_item.add(name)
+                    continue
+
 
                 if rect is None:
                     # create new
@@ -897,6 +924,7 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
                 else:
                     rect.fill_color('grey', 0.5)
                 
+
                 if state == 1:
                     rect.handle_color(fill='yellow', outline='orange')
                 elif state == 0:
@@ -904,7 +932,7 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
                 else:
                     rect.handle_color(fill='grey', outline='white')
             
-            remove_item = set(self.rects) - set(self._target_list)
+            remove_item |= (set(self.rects) - set(self._target_list))
             for name in remove_item:
                 r_obj = self.rects.pop(name)
                 # self.delete(r_obj)

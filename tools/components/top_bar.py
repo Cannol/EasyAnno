@@ -26,6 +26,7 @@ class TopBar(tkk.Frame, metaclass=LoggerMeta):
         self._btn_generate_dataset = tkk.Button(self, bg=bg, command=self._gen_datasets,  width=20, text='生成数据集', relief='flat')
         self._btn_new_target = tkk.Button(self, bg=bg, command=self._multi_targets_annotations, width=10, text='新建目标', relief='flat')
         self._btn_relations = tkk.Button(self, bg=bg, command=self._build_relations, width=15, text='创建两个目标关系', relief='flat')
+
         self._construct()
 
         self.controler = None
