@@ -256,7 +256,7 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
             hash_.update(('%s%.3f' % (self._seed, time.time())).encode('ascii'))
             code = hash_.hexdigest()[:length]
             if code.isnumeric():
-                print(code)
+                # print(code)
                 continue
             if self.targets_dict.get(code, None) is None:
                 return code

@@ -128,6 +128,7 @@ class VideoSequence(object, metaclass=LoggerMeta):
             ret, frame = cap.read()
             if ret == 0:
                 progress.write('Error occurred in reading frame: %d' % (i+1))
+                yield i, None
                 continue
             yield i, frame
                 

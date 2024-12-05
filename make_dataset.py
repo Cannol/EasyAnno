@@ -5,6 +5,9 @@ from bases.workspace import AttrType, SharedNamespace, FreeAttr as WFreeAttr
 from bases.targets import Target
 from bases.video_reader import VideoSequence
 
+import cv2
+from PIL import Image
+
 # 修改参数区  =====================
 """
 修改这里以配置:
@@ -25,20 +28,24 @@ from bases.video_reader import VideoSequence
           - abc@2
  - FRAMES_FOR_EACH_SCRIPT: 每个视频片段的截断长度（帧数），视频中不能被它整除的部分将会被舍弃
  - OUT_DIR：输出的数据集路径根目录位置
+ - POST_FIX: 输出的视频帧图像后缀名称，如：jpg, png等，不要加“.”
 """
 
-WORKSPACE_ROOT = r"C:\Users\new_project"
+WORKSPACE_ROOT = r"C:\new_project"
 FILE_FORMAT = r'%s#%04d-%04d'  # videoname#startframe-endframe
-USE_VIDEONAME_ONLY = False
+USE_VIDEONAME_ONLY = True
 SAME_FILE_SYMBOL = '@'
 FRAMES_FOR_EACH_SCRIPT = 25
+POST_FIX = "jpg"
 
-OUT_DIR = r"c:\Users\output_path"
+OUT_DIR = r"c:\output_path"
 # ============= END ==============
 
 # 生成所有需要的预设路径
 OUT_VIDEO_CLIPS = os.path.join(OUT_DIR, 'video_clips')
 OUT_ANNO_FILES = os.path.join(OUT_DIR, "annotation_clips")
+# os.makedirs(OUT_VIDEO_CLIPS, exist_ok=True)
+# os.makedirs(OUT_ANNO_FILES, exist_ok=True)
 
 WORKSPACE_VIDEOS = os.path.join(WORKSPACE_ROOT, 'Videos')
 WORKSPACE_ANNOS = os.path.join(WORKSPACE_ROOT, 'Annotations')
@@ -63,8 +70,9 @@ def _create_attrs(config_file):
 video_names_saved = {}
 
 def _video_name_transfer(name: str):
+    pure_name = os.path.basename(name)
     if USE_VIDEONAME_ONLY:
-        name = os.path.basename(name)
+        name = pure_name
     else:
         name = name.replace('/', '_')
         name = name.replace('\\', '_')
@@ -75,7 +83,8 @@ def _video_name_transfer(name: str):
         pre_name = out_name
         out_name = "%s%s%d" % (pre_name, SAME_FILE_SYMBOL, has_count)
         print(f'[WARNING!] Same file name "{pre_name}" has been renamed to "{out_name}')
-    return out_name
+  
+    return os.path.splitext(pure_name)[0], out_name
 
 def _make_one_frame_info(frame_num, video_name, target_names):
     # target_ids = list(range(1, len(target_names)+1))
@@ -160,8 +169,13 @@ def _make_one_frame_info(frame_num, video_name, target_names):
     # if len(out_dict["captions"]) > 0:
     #     print(out_dict)
 
-    return out_dict    
-    
+    return out_dict
+
+def _save_video_frame(save_path, frame):
+    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+    # img = Image.fromarray(frame)
+    # img.save(save_path)
+    cv2.imencode(".%s" % POST_FIX, frame)[1].tofile(save_path)
 
 # print(_video_name_transfer('asdfa/abc.mp4'))
 # print(_video_name_transfer('abc.mp4'))
@@ -205,7 +219,7 @@ for video_name, contents in project_dict.items():
     for i, target_name in enumerate(target_names):
         target_id_map[target_name] = i+1
 
-    video_name_real = _video_name_transfer(video_name)
+    p_videoname, video_name_real = _video_name_transfer(video_name)
 
     for i, frame in iter_frame:
 
@@ -226,6 +240,8 @@ for video_name, contents in project_dict.items():
         if i % FRAMES_FOR_EACH_SCRIPT == 0:
             miniscript_name = FILE_FORMAT % (video_name_real, i+1, i+FRAMES_FOR_EACH_SCRIPT)
             out_json_dicts = []
+            video_clip_save_dir = os.path.join(OUT_VIDEO_CLIPS, miniscript_name)
+            os.makedirs(video_clip_save_dir, exist_ok=True)
         
         dict_out = _make_one_frame_info(i+1, video_name_real, target_names)
         out_json_dicts.append(dict_out)
@@ -235,6 +251,14 @@ for video_name, contents in project_dict.items():
             SaveToFile(full_path=os.path.join(OUT_ANNO_FILES, "%s.json" % miniscript_name),
                        dict_obj=out_json_dicts,
                        create_dir=True)
+            
+        # save video
+        frame_save_file = os.path.join(video_clip_save_dir, "img%05d_%s.%s" % (i+1, p_videoname, POST_FIX))
+        # print(frame_save_file)
+        # print(frame.shape)
+        _save_video_frame(frame_save_file, frame)
+        # exit()
+        
     # clear all
     clean_all()
     del videoscript, iter_frame
