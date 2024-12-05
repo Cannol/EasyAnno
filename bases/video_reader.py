@@ -112,10 +112,31 @@ class VideoSequence(object, metaclass=LoggerMeta):
         self._stop_read = False
         self._is_reading = False
 
+    def iter_read(self, cell_length, discard=True):
+        cap = cv2.VideoCapture(self._video_file_path)
+
+        if discard:
+            length = self._frame_count//cell_length * cell_length
+            if length != self._frame_count:
+                self._L.info('视频%s不满足%d的倍数条件，末尾被舍弃，长度由%d变为%d' % (self._video_name, cell_length, self._frame_count, length))
+        else:
+            length = self._frame_count
+
+        progress = tqdm.tqdm(range(length))
+
+        for i in progress:
+            ret, frame = cap.read()
+            if ret == 0:
+                progress.write('Error occurred in reading frame: %d' % (i+1))
+                continue
+            yield i, frame
+                
+        cap.release()
+
     @property
     def Shape(self): return self._video_height, self._video_width, self._channel
 
-    def __len__(self): return len(self._frames)
+    def __len__(self): return self._frame_count
 
     def __getitem__(self, item):
         # assert isinstance(item, int)

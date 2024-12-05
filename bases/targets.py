@@ -633,6 +633,25 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
         polys = self.rect_poly_points[indexes]
         center_points = np.average(polys, axis=1)
         return center_points
+    
+    def get_bbox(self, index):
+        if self.state_flags[index] == 0:
+            valid, poly = self.get_rect_poly(index)
+            if valid:
+                right = float(np.max(poly[:, 0]))
+                left = float(np.min(poly[:, 0]))
+                bottom = float(np.max(poly[:, 1]))
+                top = float(np.min(poly[:, 1]))
+                
+                width = right - left
+                height = bottom - top
+
+                return [left, top, width, height]
+            else:
+                return None
+        else:
+            return None
+
 
 
 def normalizing_targets(path):

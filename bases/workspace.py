@@ -393,7 +393,7 @@ class VideoAnnotation(metaclass=LoggerMeta):
                 self._L.warning('选择保留这些异常文件')
         
         
-    def start_annotation(self):
+    def start_annotation(self, auto_save=True):
         Target.SetLength(len(SharedNamespace.video_frame_obj))
         w, h, _ = SharedNamespace.video_frame_obj.Shape
         Target.SetGlobalOffsize(0, 0, w, h)
@@ -416,12 +416,14 @@ class VideoAnnotation(metaclass=LoggerMeta):
                 attr_f:FreeAttr = SharedNamespace.attrs[k]
                 attr_f.bind_target_attr(a)
 
-        self.auto_save_start()
+        if auto_save:
+            self.auto_save_start()
         
         
-    def end_annotation(self):
+    def end_annotation(self, auto_save=True):
         self.target_names = set(Target.targets_dict)
-        self.auto_save_stop()
+        if auto_save:
+            self.auto_save_stop()
         Target.targets_dict.clear()
         clean_all()
         
