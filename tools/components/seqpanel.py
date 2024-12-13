@@ -3,6 +3,7 @@ import tkinter as tkk
 from tkinter import messagebox
 from bases.workspace import SharedNamespace, AttrType, FreeAttr as WFreeAttr
 from bases.attrs import SingleAttr, FreeAttr, MultiObjAttr
+from bases.targets import Target
 
 from functools import partial
 
@@ -34,6 +35,12 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
     EMPTY_ELEMS = {
         "fill": "Grey",
         "outline": "black",
+        "width": 1
+    }
+
+    EMPTY_DISABLED_ELEMS = {
+        "fill": "black",
+        "outline": "grey",
         "width": 1
     }
 
@@ -377,6 +384,24 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
         y2_locate = y1_locate + self._block_height
 
         tag = name
+        target_symbol = name.split('.')
+
+        start_index = 0
+        end_index = self._length-1
+
+        if len(target_symbol) > 1:
+            target_names = target_symbol[0].split('_')
+
+            for target_name in target_names:
+                t_obj:Target = Target.targets_dict[target_name]
+
+                start_index = max(t_obj.start_index, start_index)
+                end_index = min(t_obj.end_index, end_index)
+        elif isinstance(data, Target):
+            t_obj:Target = Target.targets_dict[target_symbol[0]]
+
+            start_index = max(t_obj.start_index, start_index)
+            end_index = min(t_obj.end_index, end_index)
 
         if self._row_data.get(row, None) is not None:
             self.seq_panel.delete(tag)
@@ -391,6 +416,8 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
                                             tags=tag, 
                                             font=self._text_font_left,
                                             anchor='e')
+            
+
         start_x = self._start_x_right
         value_last = -2
         index_start = -1
@@ -403,34 +430,109 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
                                                     start_x + (index_end+1)*self._block_width, 
                                                     y2_locate, 
                                                     tags=tag, **self.VALUED_ELEMS)
-                        
+                
                 self.seq_panel.create_text(start_x + index_start*self._block_width + 2,
                                     y1_locate+self._block_height/2,
                                     text=SharedNamespace.attrs[data.type_name][value_last],
                                     anchor='w', font=self._text_font_right,tag=tag)
 
-        
-        for i in range(self._length):
+        def _draw_color_bar(_color):
+            if value_last >= 0:
+                self.seq_panel.create_rectangle(start_x + index_start*self._block_width, 
+                                                    y1_locate, 
+                                                    start_x + (index_end+1)*self._block_width, 
+                                                    y2_locate, 
+                                                    tags=tag,
+                                                    fill=_color,
+                                                    outline="black",
+                                                    width=1)
+                self.seq_panel.create_text(start_x + index_start*self._block_width + 2,
+                                    y1_locate+self._block_height/2,
+                                    text=Target.state_dict_reverse[value_last],
+                                    anchor='w', font=self._text_font_right,tag=tag)
 
-            value = int(data[i])
-            
-            if value < 0:
-                _draw()
-                    
-                self.seq_panel.create_rectangle(start_x + i*self._block_width, 
+        for i in range(start_index):
+            self.seq_panel.create_rectangle(start_x + i*self._block_width, 
                                                 y1_locate, 
                                                 start_x + (i+1)*self._block_width, 
                                                 y2_locate, 
-                                                tags=tag, **self.EMPTY_ELEMS)
-                value_last = value
-
-            elif value == value_last:
-                index_end = i
-            else:
-                _draw()
-                index_start = index_end = i
-                value_last = value
+                                                tags=tag, **self.EMPTY_DISABLED_ELEMS)
         
+        if isinstance(data, Target):
+            key_points = []
+            for i in range(start_index, end_index+1):
+                
+                value, frame_flag = data[i]
+
+                if frame_flag == 1:
+                    # key frame
+                    key_points.append(i)
+                
+                if value < 0:
+                    pass  # cannot reach here
+                    # _draw_color_bar()
+                        
+                    # self.seq_panel.create_rectangle(start_x + i*self._block_width, 
+                    #                                 y1_locate, 
+                    #                                 start_x + (i+1)*self._block_width, 
+                    #                                 y2_locate, 
+                    #                                 tags=tag, **self.EMPTY_ELEMS)
+                    # value_last = value
+
+                elif value == value_last:
+                    index_end = i
+                    if index_end == end_index:
+                        _draw_color_bar(Target.flag_color_panel[value_last])
+                else:
+                    _draw_color_bar(Target.flag_color_panel[value_last])
+                    index_start = index_end = i
+                    value_last = value
+            
+            r = 2 if self._block_width >= 5 else 1
+            for i in key_points:
+                c = start_x + (i+0.5)*self._block_width
+                c_y = y1_locate + self._block_height * 0.5
+                    
+                self.seq_panel.create_oval(c-r, 
+                                        c_y-r, 
+                                        c+r, 
+                                        c_y+r, 
+                                        tags=tag,
+                                        fill="red",
+                                        outline="black",
+                                        width=1)
+            
+        else:
+
+            for i in range(start_index, end_index+1):
+                
+                value = int(data[i])
+                
+                if value < 0:
+                    _draw()
+                        
+                    self.seq_panel.create_rectangle(start_x + i*self._block_width, 
+                                                    y1_locate, 
+                                                    start_x + (i+1)*self._block_width, 
+                                                    y2_locate, 
+                                                    tags=tag, **self.EMPTY_ELEMS)
+                    value_last = value
+
+                elif value == value_last:
+                    index_end = i
+                    if index_end == end_index:
+                        _draw()
+                else:
+                    _draw()
+                    index_start = index_end = i
+                    value_last = value
+        
+        for i in range(end_index+1, self._length):
+            self.seq_panel.create_rectangle(start_x + i*self._block_width, 
+                                                y1_locate, 
+                                                start_x + (i+1)*self._block_width, 
+                                                y2_locate, 
+                                                tags=tag, **self.EMPTY_DISABLED_ELEMS)
             
     def initialize(self, length, block_height: int, block_width: int):
         self._length = length
@@ -445,6 +547,8 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
         name, data, attr_type = self._row_data[row]
 
         if attr_type is None:
+            self.__draw_one_bar(row, name, data)
+        elif isinstance(data, Target):
             self.__draw_one_bar(row, name, data)
         else:
             self.__draw_one_bar(row, '%s.%s' % (name, attr_type), data)
@@ -468,6 +572,9 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
 
         # one_target
         for name, item in self._one_attrs.items():
+            t_obj:Target = Target.targets_dict[name]
+            self.insert_new(row=rows, name=name, attr_type='_frame', data=t_obj)
+            rows+=1
             for attr_obj in item:
                 # print(name, item, attr_obj)
                 self.insert_new(row=rows, name=name, attr_type=attr_obj.type_name, data=attr_obj)
@@ -515,6 +622,9 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
             self.__draw_one_bar(row, name, data)
             pop_name = name.split('.')[-1]
             self._pop_menu[row] = self._menu_dict[pop_name]
+        elif attr_type == '_frame':
+            self.__draw_one_bar(row, name, data)
+            self._pop_menu[row] = self._menu_dict[attr_type]
         else:
             self.__draw_one_bar(row, '%s.%s' % (name, attr_type), data)
             self._pop_menu[row] = self._menu_dict[attr_type]
@@ -562,6 +672,9 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
         """
         self._menu_dict.clear()
         if menu_items is not None:
+
+            menu_items["_frame"] = Target.state_dict
+
             for menu_type, selections in menu_items.items():
                 # print(menu_items)
                 selection_with_func = {}

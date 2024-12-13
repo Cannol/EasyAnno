@@ -6,7 +6,6 @@ from bases.targets import Target
 from bases.video_reader import VideoSequence
 
 import cv2
-from PIL import Image
 
 # 修改参数区  =====================
 """
@@ -39,6 +38,7 @@ FRAMES_FOR_EACH_SCRIPT = 25
 POST_FIX = "jpg"
 
 OUT_DIR = r"c:\output_path"
+SKIP_EMPTY = True
 # ============= END ==============
 
 # 生成所有需要的预设路径
@@ -76,6 +76,7 @@ def _video_name_transfer(name: str):
     else:
         name = name.replace('/', '_')
         name = name.replace('\\', '_')
+        name = name.replace('__', '_')   # 应对某些场景中存在双斜杠的情况
     out_name = os.path.splitext(name)[0]
     has_count = video_names_saved.get(out_name, 0)
     video_names_saved[out_name] = has_count+1
@@ -191,7 +192,12 @@ for video_name, contents in project_dict.items():
     target_names = contents['target_names']
     video_id = contents['anno_id']
     video_file = contents['video_file']
-    print(f"[{video_name}] video_name:{video_file} id:{video_id} Targets: {target_names}")
+    
+
+    if SKIP_EMPTY and len(target_names) == 0:
+        print(f"[{video_name}] video_name:{video_file} id:{video_id} Targets: {target_names} --> Empty Skipped!")
+    else:
+        print(f"[{video_name}] video_name:{video_file} id:{video_id} Targets: {target_names}")
 
     anno_dir = os.path.join(WORKSPACE_ANNOS, video_id)
 

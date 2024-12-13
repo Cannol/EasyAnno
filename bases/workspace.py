@@ -308,10 +308,10 @@ class VideoAnnotation(metaclass=LoggerMeta):
     target_names: set = None    # 存放目标名称
     state: int = None
 
-    def state_name(self): return 
+    # def state_name(self): return 
 
-    def check(self):
-        pass
+    # def check(self):
+    #     pass
 
     def to_dict(self):
         return {
@@ -328,6 +328,8 @@ class VideoAnnotation(metaclass=LoggerMeta):
         self.video_file = anno_dict['video_file']
         self.target_names = set(anno_dict['target_names'])
         self.state = anno_dict['state']
+        if self.state == self.STATE_NOT_START and len(self.target_names) > 0:
+            self.state = self.STATE_HAS_STARTED
         return self
 
     @classmethod
@@ -373,11 +375,13 @@ class VideoAnnotation(metaclass=LoggerMeta):
 
         delete_unknown = set(self.target_names) - target_names
         add_new = target_names - set(self.target_names)
+        if len(target_names) > 0:
+            self.state = self.STATE_HAS_STARTED
         self._L.info("Update annotation directory's file list [ANNO_ID:{%s}]! Add %d Del %d" % (self.anno_id, len(add_new), len(delete_unknown)))
     
     def finished(self): self.state = self.STATE_FINISHED
 
-    def cancel_finished(self): self.state = self.STATE_HAS_STARTED
+    def cancel_finished(self): self.state = self.STATE_HAS_STARTED if len(self.target_names) > 0 else self.STATE_NOT_START
 
     def load_all_annotations(self):
         Target.GetAllTargets()
@@ -531,7 +535,7 @@ class WorkSpace(metaclass=LoggerMeta):
             if obj.state == VideoAnnotation.STATE_LOST:
                 if os.path.exists(self.get_videofile(name)[1]):
                     obj.refound_videofile()
-            obj.check()
+            # obj.check()
 
     def add_videos(self, video_paths, copy_files=False):
         """

@@ -33,13 +33,31 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
     _working = False
     _pause = False
 
-    NOR = 0
-    INV = 1
-    OCC = 2
+    NOR = 0   # 目标正常
+    BLU = 1   # 目标模糊
+    POC = 2  # 部分遮挡
+    OCC = 3   # 全遮挡
+    OV = 4    # 出画面视野
+    
+    flag_color_panel = ["deep sky blue", "light pink", "lemon chiffon", "goldenrod", "brown4"]
 
-    flag_dict = ['[NOR]正常可见', '[INV]与背景混淆难以分辨', '[OCC]遮挡不可见', '[UNK]未标注']
-    flag_dict_en = ['Normal', 'Invisible', 'Occlusion', 'Unknown']
+    state_dict = {
+        "NOR": 0,
+        "BLU": 1,
+        "POC": 2,
+        "OCC": 3,
+        "OV": 4
+    }
+
+    state_dict_reverse = ["NOR", 'BLU', 'POC', 'OCC', 'OV']
+
+    # flag_dict = ['[NOR]正常可见', '[INV]与背景混淆难以分辨', '[OCC]遮挡不可见', '[UNK]未标注']
+    # flag_dict_en = ['Normal', 'Invisible', 'Occlusion', 'Unknown']
     key_frame_flag_dict_en = ['Non-Key Frame', 'Key Frame', 'AI', 'Unlabeled']
+
+    # state_flag_dict = {
+    #     ""
+    # }
 
     def to_dict(self):
         self.start_index = int(self.start_index)
@@ -73,6 +91,9 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
         except:
             self._L.warning('指定待删除文件不存在：%s' % filename)
         return filename
+    
+    def get_target_name(self):
+        return [self.name]
     
     @classmethod
     def GetDefaultPath(cls): return cls._default_path
@@ -275,6 +296,19 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
         self.__changed_flag = True
         self.__freeze = False
 
+    def __getitem__(self, index):
+        return int(self.state_flags[index]), int(self.key_frame_flags[index][2])
+    
+    def __setitem__(self, index, value):
+        if isinstance(index, int) and self.start_index <= index <= self.end_index:
+            self.state_flags[index] = value
+            self.__changed_flag = True
+        elif isinstance(index, slice):
+            # index.start = max(self.start_index, index.start)
+            # index.stop = min(self.end_index+1, index.stop)
+            self.state_flags[index]= value
+            self.__changed_flag = True
+
     @property
     def freeze(self):
         return True if self.__freeze else False
@@ -337,18 +371,18 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
         cls._L.info('New target was created! [%s-frame_at %d]' % (obj.name, start_index))
         return obj
 
-    def set_object_state(self, from_index, state, to_index=-1):
-        if to_index < 0:
-            self.state_flags[from_index] = state
-            self._L.info('Set frame flag %s at frame %d' % (self.flag_dict[state], from_index))
-            self.__changed_flag = True
-        elif to_index > from_index:
-            self.state_flags[from_index: to_index] = state
-            self._L.info('Set frame flag %s from frame %d to frame %d' % (self.flag_dict[state], from_index, to_index))
-            self.__changed_flag = True
-        else:
-            self._L.error('from_index must be less than to_index! from_index={}, to_index={}'
-                          .format(from_index, to_index))
+    # def set_object_state(self, from_index, state, to_index=-1):
+    #     if to_index < 0:
+    #         self.state_flags[from_index] = state
+    #         self._L.info('Set frame flag %s at frame %d' % (self.flag_dict[state], from_index))
+    #         self.__changed_flag = True
+    #     elif to_index > from_index:
+    #         self.state_flags[from_index: to_index] = state
+    #         self._L.info('Set frame flag %s from frame %d to frame %d' % (self.flag_dict[state], from_index, to_index))
+    #         self.__changed_flag = True
+    #     else:
+    #         self._L.error('from_index must be less than to_index! from_index={}, to_index={}'
+    #                       .format(from_index, to_index))
 
     @property
     def File(self):
@@ -434,8 +468,8 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
                 self._calculate_frame_between(self.end_index, frame_index)
             else:
                 self.key_frame_flags[self.end_index+1:frame_index, :] = [self.end_index, frame_index, 0]
-            self.state_flags[self.end_index+1:frame_index] = self.state_flags[self.end_index]
-            self.state_flags[frame_index] = self.NOR
+            self.state_flags[self.end_index+1:frame_index+1] = self.NOR
+            # self.state_flags[frame_index] = self.NOR
             self.end_index = frame_index
         elif frame_index < self.start_index:
             self.key_frame_flags[frame_index, :] = [frame_index, self.start_index, 1]
@@ -501,7 +535,7 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
             self._calculate_frame_between(pre_, next_)
             self.key_frame_flags[pre_, 1] = next_
             self.key_frame_flags[next_, 0] = pre_
-            self.set_object_state(pre_, self.state_flags[pre_], next_)
+            # self.set_object_state(pre_, self.state_flags[pre_], next_)
             
         self.__changed_flag = True
         return True
@@ -635,7 +669,7 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
         return center_points
     
     def get_bbox(self, index):
-        if self.state_flags[index] == 0:
+        if self.key_frame_flags[index][2] >=0 and self.state_flags[index] == 0:
             valid, poly = self.get_rect_poly(index)
             if valid:
                 right = float(np.max(poly[:, 0]))

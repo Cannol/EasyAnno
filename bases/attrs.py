@@ -21,8 +21,9 @@ class AttrBase(JsonTransBase, metaclass=LoggerMeta):
     def SetDefaultPath(cls, default_path): cls._default_path = default_path 
 
     @classmethod
-    def SetAttrMap(cls, attr_dict):
+    def SetAttrMap(cls, attr_dict: dict):
         cls.attr_map.clear()
+        attr_dict.pop('_frame', None)
         for dt in default_types:
             dt.clear()
 
