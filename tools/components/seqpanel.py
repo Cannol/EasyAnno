@@ -193,22 +193,47 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
 
             n = int(event.x / self._block_width + self._get_offx_n())
 
-            value = self._row_data[self._selected_row][1][n]
+            value_ori = self._row_data[self._selected_row][1][n]
+            if isinstance(value_ori, tuple):
+                value = value_ori[0]
+            else:
+                value = value_ori
+
             if value == -1:
                 self._mouse_end_ops()
                 return
             
             _data_array = self._row_data[self._selected_row][1]
-
-            start = n
-            while start >= 0 and _data_array[start] == value:
-                start -= 1
-            start += 1
-            end = n
-            while end < self._length and _data_array[end] == value:
-                end += 1
-            end -= 1
             
+            if isinstance(value_ori, tuple):
+                if value_ori[1] == 1:
+                    # key frame
+                    start = n
+                    end = n+1
+                    while end < self._length and _data_array[end] == (value, 0):
+                        end += 1
+                    end -= 1
+                else:
+                    start = n
+                    while start >= 0 and _data_array[start] == value_ori:
+                        start -= 1
+                    # start += 1
+                    if _data_array[start][1] == 0:
+                        start += 1
+                    end = n
+                    while end < self._length and _data_array[end] == value_ori:
+                        end += 1
+                    end -= 1
+            else:
+                start = n
+                while start >= 0 and _data_array[start] == value:
+                    start -= 1
+                start += 1
+                end = n
+                while end < self._length and _data_array[end] == value:
+                    end += 1
+                end -= 1
+
             self._n_start = start
             self._n_end = end
             
@@ -558,6 +583,24 @@ class SeqenceAttributePanel(tkk.Frame, metaclass=LoggerMeta):
             self.refresh_one_row(row)
         self.__draw_pointer()
         self._bar_change_refresh()
+
+    def refresh_target(self, target_name, only_frame_state=False):
+        if only_frame_state:
+            for row in range(self.rows):
+                name, data, attr_type = self._row_data[row]
+                if isinstance(data, Target) and target_name == data.name:
+                    self.__draw_one_bar(row, name, data)
+        else:
+
+            for row in range(self.rows):
+                name, data, attr_type = self._row_data[row]
+                if isinstance(data, Target) and target_name == data.name:
+                    self.__draw_one_bar(row, name, data)
+                elif isinstance(data, MultiObjAttr) and name in data.object_group:
+                    self.__draw_one_bar(row, '%s.%s' % (name, attr_type), data)
+                elif isinstance(data, SingleAttr) and data.target_name == target_name:
+                    self.__draw_one_bar(row, '%s.%s' % (name, attr_type), data)
+        self.__draw_pointer()
 
     def refresh(self, force=False):
         if force:

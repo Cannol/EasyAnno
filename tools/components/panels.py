@@ -840,8 +840,10 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
     
     def target_shape_change(self, name, new_points):
         t_obj:Target = self._target_list[name]
-        t_obj.set_key_point(frame_index=self.CurrFrame, poly_points=new_points/self.Scale)
+        is_changed = t_obj.set_key_point(frame_index=self.CurrFrame, poly_points=new_points/self.Scale)
         self.refresh()
+        if is_changed:
+            SharedNamespace.frameseq_panel.refresh_target(name)
 
     def frame_change(self):
         self.refresh()
@@ -865,6 +867,7 @@ class ImageDrawPanel(tkk.Canvas, metaclass=LoggerMeta):
             if target.remove_key_point_at(self.CurrFrame):
                 self._L.info('删除目标%s（%s）位于第%s帧的关键帧' % (rect.Name, target.class_name, self.CurrFrame))
                 self.refresh()
+                SharedNamespace.frameseq_panel.refresh_target(rect.Name)
 
     # def _try_read_from_file(self, filename):
 

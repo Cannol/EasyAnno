@@ -401,13 +401,13 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
         key = self.key_frame_flags[frame_index, 2]
         if poly_points is None:
             if key == 1:
-                return
+                return False
             _, poly_points = self.get_rect_poly(frame_index)
             if key == 2:
                 self._add_key_point_between(frame_index, poly_points)
                 if refresh:
                     self.__changed_flag = True
-                return
+                return True
 
         if key == 1:
             self._modify_key_point_at(frame_index, poly_points)
@@ -420,6 +420,7 @@ class Target(JsonTransBase, metaclass=LoggerMeta):
             self._modify_key_point_at(frame_index, poly_points, False)
         if refresh:
             self.__changed_flag = True
+        return True
 
     def set_auto_key_points(self, indexes, rects):
         if self.key_frame_flags[indexes[-1], 2] == -1:
